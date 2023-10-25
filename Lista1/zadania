@@ -1,0 +1,12 @@
+1. znajdź źródło danych aby można było utworzyć graf, 1000 wierzchołków minimum
+2. zaczytać dane do networkx aby mieć graf
+3. dla grafu należy przerowadzić kilka operacji
+    3a. umożliwić użytkownikowi znalezienie najkrótszej ścieżki między dwoma wierzchołkami
+    3b. sprawdzić czy graf jest eulerowski i czy istnieje ścieżka eulerowska (w podgrafie też)
+    3c. dla chętnych - przepływy
+
+1. graf jakiś fajny co ma krawędzie i nody
+2. no pandasem czy coś
+3a. dijkstra_path w nx
+3b. wygeneruj nowy graf tak z 100 wierzchołkami i generuj tak długo aby był semi/eulerowski i go zapisz
+3c. flows w nx
