@@ -52,16 +52,12 @@ def parameters_of_graph(graph: nx.Graph) -> None:
     print(f"Średnica grafu = {nx.diameter(graph)},", end=" ")
     print(f"Średnia długość najkrótszej ścieżki = {nx.average_shortest_path_length(graph)}.")
 
-    #wykresy1(graph)
-    #uproszczony_graf(graph, density_threshold=0.05)
-    #uproszczony_graf(graph, density_threshold=0.1)
-    #uproszczony_graf(graph, density_threshold=0.25)
-
-
-    """
-    składowe spójne, k-spójność, przeguby i mosty
-    klika n-tego rzędu, klika maksymalna, n-podklika
-    """
+    wykresy1(graph)
+    wykresy2(graph)
+    wykresy3(graph)
+    uproszczony_graf(graph, density_threshold=0.05)
+    uproszczony_graf(graph, density_threshold=0.1)
+    uproszczony_graf(graph, density_threshold=0.25)
 
 
 def wykresy1(graph: nx.Graph) -> None:
@@ -113,12 +109,100 @@ def wykresy1(graph: nx.Graph) -> None:
                     ylabel = "Liczba wierzchołków"
                 axs[i, j].set_ylabel(ylabel)
 
-                # Dodawanie tytułu dla wykresu
                 axs[i, j].set_title(current_centrality["title"])
                 idx += 1
             else:
-                # Ukrywanie pustego subplotu
                 axs[i, j].axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+
+def wykresy2(graph: nx.Graph) -> None:
+    connected = list(map(len, nx.connected_components(graph)))
+
+    k_components = nx.k_components(graph)
+    k_amounts = [0] * (len(k_components.keys()) + 1)
+    for k, v in k_components.items():
+        k_amounts[k] = len(v)
+
+    bridges = list(nx.bridges(graph))
+    bridgedict = defaultdict(int)
+    for (u, v) in bridges:
+        bridgedict[u] += 1
+        bridgedict[v] += 1
+    bridge_amounts = [0] * (max(bridgedict.values()) + 1)
+    for k, v in bridgedict.items():
+        bridge_amounts[v] += 1
+    bridge_amounts[0] = graph.number_of_nodes() - sum(bridge_amounts)
+
+    print(f"Mosty: {bridges}")
+    print(f"Przeguby: {list(nx.articulation_points(graph))}")
+
+    funcs = [
+        {'values': connected, 'title': 'Składowe spójne', 'x': 'Podgraf', 'y': 'Ilość wierzchołków'},
+        {'values': k_amounts, 'title': 'K-spójne podgrafów', 'x': 'k', 'y': 'Ilość podgrafów'},
+        {'values': bridge_amounts, 'title': 'Spójność wierzchołka', 'x': 'Częstotliwosć występowania w mostach', 'y': 'Ilość wierzchołków'}
+    ]
+
+    fig, axs = plt.subplots(1, 3, figsize=(15, 10))
+    for i in range(3):
+        values = funcs[i]
+        mean = sum(values['values']) / len(values['values'])
+        median = sum(values['values']) // 2
+        temp = -1
+        while median > 0:
+            temp += 1
+            median -= values['values'][temp]
+        median = temp
+
+        axs[i].bar([_ for _ in range(len(values['values']))], values['values'])
+        axs[i].axhline(y=mean, color='r', linestyle='--', label=f'Średnia ilości: {mean:.3f}')
+        axs[i].axvline(x=median, color='g', linestyle='-.', label=f'Mediana wielkości: {median:.3f}')
+        axs[i].set_xlabel(values['x'])
+        axs[i].set_xlabel(values['x'])
+        axs[i].set_ylabel(values['y'])
+        axs[i].set_title(values["title"])
+        axs[i].legend()
+
+    plt.tight_layout()
+    plt.show()
+
+
+def wykresy3(graph: nx.Graph) -> None:
+    cliques = nx.find_cliques(graph)
+    cliques = [c for c in cliques]
+    cliq_lens = [0] * (max(len(c) for c in cliques) + 1)
+    for clique in cliques:
+        cliq_lens[len(clique)] += 1
+
+    node_cliques = nx.node_clique_number(graph)
+    clique_number = [0] * (graph.number_of_nodes())
+    for k, v in node_cliques.items():
+        clique_number[k - 1] = v
+
+    node_maxs = [0] * (max(clique_number) + 1)
+    for n in clique_number:
+        node_maxs[n] += 1
+
+    funcs = [
+        {'values': cliq_lens, 'title': 'Wielkości podklik', 'x': 'Ilośc wierzchołków', 'y': 'Ilość podklik'},
+        {'values': clique_number, 'title': 'Największa klika z wierzchołkiem', 'x': 'Wierzchołek', 'y': 'Wielkość podkliki'},
+        {'values': node_maxs, 'title': 'Ilość wierzchołków największych podklik', 'x': 'Wielkość podkliki',
+         'y': 'Ilość wierzchołków'}
+    ]
+
+    fig, axs = plt.subplots(1, 3, figsize=(15, 10))
+    for i in range(3):
+        values = funcs[i]
+        mean = sum(values['values']) / len(values['values'])
+        axs[i].bar([_ for _ in range(len(values['values']))], values['values'])
+        axs[i].axhline(y=mean, color='r', linestyle='--', label=f'Średnia ilości: {mean:.3f}')
+        axs[i].set_xlabel(values['x'])
+        axs[i].set_xlabel(values['x'])
+        axs[i].set_ylabel(values['y'])
+        axs[i].set_title(values["title"])
+        axs[i].legend()
 
     plt.tight_layout()
     plt.show()
@@ -155,7 +239,7 @@ def split_graph_by_density(graph, density_threshold) -> List[nx.Graph]:
                     if neighbors_in_subgraph:
                         key, value = max(neighbors_in_subgraph.items(), key=lambda x: len(x[1]))
                         if 2 * (subgraph.number_of_edges() + len(value)) \
-                            / (subgraph.number_of_nodes() * (subgraph.number_of_nodes() - 1)) \
+                            / (subgraph.number_of_nodes() * (subgraph.number_of_nodes() + 1)) \
                             >= density_threshold:
                             subgraph.add_node(key)
                             visited.add(key)
@@ -169,7 +253,7 @@ def split_graph_by_density(graph, density_threshold) -> List[nx.Graph]:
     return subgraphs
 
 
-def count_inter_subgraph_edges(original_graph, subgraphs) -> Dict[int, List]:
+def count_inter_subgraph_edges(original_graph, subgraphs) -> Dict[Tuple[int, int], int]:
     edge_counts = {}
     for i in range(len(subgraphs)):
         for j in range(i + 1, len(subgraphs)):
