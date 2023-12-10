@@ -15,7 +15,7 @@ matplotlib.use('TkAgg')
 def cliques(graph: nx.Graph) -> None:
     all_cliques = sorted(list(nx.find_cliques(graph)), key=len, reverse=True)
     pos = nx.kamada_kawai_layout(graph)
-    nx.draw(graph, pos, with_labels=True)
+    nx.draw(graph, pos, with_labels=False)
 
     colors = cm.get_cmap('rainbow', len(all_cliques))
     data = {"rozmiar": [], "klika": []}
@@ -35,7 +35,7 @@ def modules(graph: nx.Graph) -> None:
     for node, id in partition.items():
         communities[id].append(node)
     pos = nx.kamada_kawai_layout(graph)
-    nx.draw(graph, pos, with_labels=True)
+    nx.draw(graph, pos, with_labels=False)
     colors = cm.get_cmap('rainbow', len(communities.keys()))
 
     data = {"rozmiar": [], "moduł": []}
@@ -49,7 +49,7 @@ def modules(graph: nx.Graph) -> None:
     plt.show()
 
 
-def agglomerate(graph: nx.Graph, threshold=6) -> Dict:
+def agglomerate(graph: nx.Graph, threshold=5.5) -> Dict:
     adj_matrix = nx.to_numpy_array(graph)
     agglomerative_clusters = linkage(adj_matrix, method='ward')
     agglomerative_labels = fcluster(agglomerative_clusters, t=threshold, criterion='distance')
@@ -94,7 +94,7 @@ def divisive(graph: nx.Graph, threshold=3) -> Dict:
         nx.draw(graph, pos, node_color=[cmap(i) for i in divisive_labels], with_labels=False, ax=ax1)
         ax1.set_title(f"Analiza hierarchii skupień - metoda podziałowa {method}")
 
-        divisive_dendrogram = dendrogram(divisive_clusters, ax=ax2, no_labels=True)
+        divisive_dendrogram = dendrogram(divisive_clusters, color_threshold=threshold, ax=ax2, no_labels=True)
         ax2.set_title(f"Dendrogram - metoda podziałowa {method}")
         plt.show()
 
