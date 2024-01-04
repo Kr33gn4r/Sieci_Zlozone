@@ -1,7 +1,7 @@
 import json
 import requests
 from bs4 import BeautifulSoup
-from nltk import word_tokenize, NaiveBayesClassifier
+from nltk import NaiveBayesClassifier
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from sklearn.model_selection import train_test_split
