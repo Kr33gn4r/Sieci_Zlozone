@@ -2,6 +2,7 @@ import networkx as nx
 import requests
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import matplotlib.widgets as widgets
 import matplotlib
 matplotlib.use("TkAgg")
 
@@ -38,6 +39,8 @@ class ClientApp:
             'avg_closeness': self.ax2.text(0.1, 0.35, 'Avg Closeness: ', fontsize=10),
         }
 
+        self.weight = 0
+
     def fetch_graph_from_server(self):
         # Zapytanie do serwera
         server_url = "http://127.0.0.1:5000/get"  # Aktualizuj, jeśli serwer działa na innym hoście lub porcie
@@ -55,8 +58,16 @@ class ClientApp:
         self.graph.clear()
 
         # Dodanie wierzchołków i krawędzi do grafu
-        self.graph.add_nodes_from(graph_data['nodes'])
+        for node_data in graph_data['nodes']:
+            node_id = node_data['id']
+            node_weight = node_data.get('weight', 0)  # Pobierz wagę, jeśli istnieje, w przeciwnym razie ustaw na 0
+            self.graph.add_node(node_id, weight=node_weight)
+
         self.graph.add_edges_from(graph_data['edges'])
+
+        # Usunięcie wierzchołków o wadze mniejszej niż self.weight
+        nodes_to_remove = [node for node in self.graph.nodes if self.graph.nodes[node].get('weight', 0) < self.weight]
+        self.graph.remove_nodes_from(nodes_to_remove)
 
     def animate(self, frame):
         # Pobranie grafu z serwera
@@ -79,6 +90,7 @@ class ClientApp:
             graph_metrics = self.calculate_graph_metrics()
             for key, text_object in self.texts.items():
                 text_object.set_text(f'{key.capitalize()}: {graph_metrics[key]}')
+
 
     def calculate_graph_metrics(self):
         # Rząd grafu (liczba wierzchołków)
@@ -124,7 +136,10 @@ class ClientApp:
         avg_centrality = sum(centrality_coefficients) / order
 
         # Współczynnik korelacji stopniowej grafu
-        degree_correlation_coefficient = nx.degree_pearson_correlation_coefficient(self.graph)
+        try:
+            degree_correlation_coefficient = nx.degree_pearson_correlation_coefficient(self.graph)
+        except Exception:
+            degree_correlation_coefficient = None
 
         # Współczynnik bliskości grafu
         closeness_coefficients = nx.closeness_centrality(self.graph).values()
@@ -146,11 +161,32 @@ class ClientApp:
             'avg_closeness': avg_closeness
         }
 
-    def run(self):
+    def run(self, interval=10000):
         nx.draw(self.graph, with_labels=True, font_size=8, node_size=50, ax=self.ax1)
-        ani = animation.FuncAnimation(self.fig, self.animate, interval=10000)
+        self.ani = animation.FuncAnimation(self.fig, self.animate, interval=interval)
         plt.show()
+
+def define_text_boxes(app):
+    interval_box_ax = plt.axes([0.62, 0.30, 0.2, 0.05])
+    interval_box = widgets.TextBox(interval_box_ax, 'Interval:')
+    interval_box.on_submit(lambda text: interval_update(app, text))
+
+def interval_update(app, text):
+    app.ani.event_source.stop()
+    app.run(int(text))
+
+def weight_update(app, text):
+    app.weight = float(text)
 
 if __name__ == "__main__":
     client_app = ClientApp()
+
+    interval_box_ax = plt.axes([0.6, 0.30, 0.2, 0.05])
+    interval_box = widgets.TextBox(interval_box_ax, 'Interval:')
+    interval_box.on_submit(lambda text: interval_update(client_app, text))
+
+    weight_box_ax = plt.axes([0.6, 0.25, 0.2, 0.05])
+    weight_box = widgets.TextBox(weight_box_ax, "Weight: ")
+    weight_box.on_submit(lambda text: weight_update(client_app, text))
+
     client_app.run()
